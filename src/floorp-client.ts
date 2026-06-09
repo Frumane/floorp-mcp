@@ -375,4 +375,102 @@ export class FloorpClient {
       { script },
     );
   }
+
+  // -- more interactions (v0.6.0) ---------------------------------------------
+
+  async hover(instanceId: string, selector?: string, fingerprint?: string): Promise<void> {
+    await this.scrollTo(instanceId, selector, fingerprint).catch(() => {});
+    await this.action(instanceId, "/hover", { selector, fingerprint }, `Hover "${selector ?? fingerprint}"`);
+  }
+
+  async doubleClick(instanceId: string, selector?: string, fingerprint?: string): Promise<void> {
+    await this.scrollTo(instanceId, selector, fingerprint).catch(() => {});
+    await this.action(instanceId, "/doubleClick", { selector, fingerprint }, `Double-click "${selector ?? fingerprint}"`);
+  }
+
+  async rightClick(instanceId: string, selector?: string, fingerprint?: string): Promise<void> {
+    await this.scrollTo(instanceId, selector, fingerprint).catch(() => {});
+    await this.action(instanceId, "/rightClick", { selector, fingerprint }, `Right-click "${selector ?? fingerprint}"`);
+  }
+
+  /** Choose an option in a <select> by value. */
+  async selectOption(instanceId: string, selector: string, value: string): Promise<void> {
+    await this.action(instanceId, "/selectOption", { selector, value }, `Select "${value}" in "${selector}"`);
+  }
+
+  /** Check/uncheck a checkbox or radio. */
+  async setChecked(instanceId: string, selector: string, checked: boolean): Promise<void> {
+    await this.action(instanceId, "/setChecked", { selector, checked }, `Set checked=${checked} on "${selector}"`);
+  }
+
+  /** Submit a form (by a selector inside/of the form). */
+  async submitForm(instanceId: string, selector?: string): Promise<void> {
+    await this.action(instanceId, "/submit", { selector }, `Submit "${selector ?? "form"}"`);
+  }
+
+  /** Set a file input's file by absolute path. */
+  async uploadFile(instanceId: string, selector: string, filePath: string): Promise<void> {
+    await this.action(instanceId, "/uploadFile", { selector, filePath }, `Upload to "${selector}"`);
+  }
+
+  // -- more reads (v0.6.0) ----------------------------------------------------
+
+  async getAttribute(
+    instanceId: string,
+    name: string,
+    selector?: string,
+    fingerprint?: string,
+  ): Promise<string | null> {
+    const p = new URLSearchParams({ name });
+    if (selector) p.set("selector", selector);
+    if (fingerprint) p.set("fingerprint", fingerprint);
+    const r = await this.request<{ value?: string | null }>(
+      "GET",
+      `/tabs/instances/${instanceId}/attribute?${p.toString()}`,
+    );
+    return r.value ?? null;
+  }
+
+  /** Readability-extracted main article (title, byline, markdown). */
+  async getArticle(
+    instanceId: string,
+  ): Promise<{ title?: string; byline?: string; markdown?: string; length?: number } | null> {
+    return this.request("GET", `/tabs/instances/${instanceId}/article`);
+  }
+
+  async getCookies(instanceId: string): Promise<unknown[]> {
+    const r = await this.request<{ cookies?: unknown[] }>(
+      "GET",
+      `/tabs/instances/${instanceId}/cookies`,
+    );
+    return r.cookies ?? [];
+  }
+
+  /** Wait until network activity settles (good after navigation/SPA loads). */
+  async waitForNetworkIdle(instanceId: string, timeout = 8000): Promise<boolean> {
+    const r = await this.request<{ ok?: boolean }>(
+      "POST",
+      `/tabs/instances/${instanceId}/waitForNetworkIdle`,
+      { timeout },
+    );
+    return r.ok ?? false;
+  }
+
+  // -- workspaces (Floorp-specific, browser-level) (v0.6.0) -------------------
+
+  async listWorkspaces(): Promise<Array<{ id: string; name: string }>> {
+    const r = await this.request<{ workspaces?: Array<{ id: string; name: string }> }>(
+      "GET",
+      "/workspaces/",
+    );
+    return r.workspaces ?? [];
+  }
+
+  async switchWorkspace(id: string): Promise<boolean> {
+    const r = await this.request<{ ok?: boolean }>(
+      "POST",
+      `/workspaces/${encodeURIComponent(id)}/switch`,
+    );
+    return r.ok ?? false;
+  }
 }

@@ -19,7 +19,7 @@ const client = new FloorpClient();
 
 const server = new McpServer({
   name: "floorp-mcp",
-  version: "0.5.0",
+  version: "0.6.0",
 });
 
 // -- helpers ------------------------------------------------------------------
@@ -458,6 +458,250 @@ server.tool(
       return textResult("Cleared focused field (real keyboard).");
     } catch (err) {
       return errorResult((err as Error).message);
+    }
+  },
+);
+
+// -- more interaction & query tools (v0.6.0) ----------------------------------
+
+function targetDesc(selector?: string, ref?: string): string {
+  return selector ?? (ref ? `ref ${ref}` : "?");
+}
+
+server.tool(
+  "hover",
+  "Hover the mouse over an element (CSS selector or `ref`). Auto-scrolls into view. Active tab unless browserId given.",
+  {
+    selector: z.string().optional().describe("CSS selector."),
+    ref: z.string().optional().describe("Fingerprint ref from snapshot."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, ref, browserId }) => {
+    try {
+      if (!selector && !ref) return errorResult("Provide a `selector` or a `ref`.");
+      await withAttachedTab(browserId, (id) => client.hover(id, selector, ref));
+      return textResult(`Hovered: ${targetDesc(selector, ref)}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "double_click",
+  "Double-click an element (CSS selector or `ref`). Auto-scrolls into view. Active tab unless browserId given.",
+  {
+    selector: z.string().optional().describe("CSS selector."),
+    ref: z.string().optional().describe("Fingerprint ref from snapshot."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, ref, browserId }) => {
+    try {
+      if (!selector && !ref) return errorResult("Provide a `selector` or a `ref`.");
+      await withAttachedTab(browserId, (id) => client.doubleClick(id, selector, ref));
+      return textResult(`Double-clicked: ${targetDesc(selector, ref)}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "right_click",
+  "Right-click (context menu) an element (CSS selector or `ref`). Auto-scrolls into view. Active tab unless browserId given.",
+  {
+    selector: z.string().optional().describe("CSS selector."),
+    ref: z.string().optional().describe("Fingerprint ref from snapshot."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, ref, browserId }) => {
+    try {
+      if (!selector && !ref) return errorResult("Provide a `selector` or a `ref`.");
+      await withAttachedTab(browserId, (id) => client.rightClick(id, selector, ref));
+      return textResult(`Right-clicked: ${targetDesc(selector, ref)}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "select_option",
+  "Choose an option in a <select> dropdown by its value. Active tab unless browserId given.",
+  {
+    selector: z.string().describe("CSS selector of the <select>."),
+    value: z.string().describe("The option value (or visible text) to select."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, value, browserId }) => {
+    try {
+      await withAttachedTab(browserId, (id) => client.selectOption(id, selector, value));
+      return textResult(`Selected "${value}" in ${selector}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "set_checked",
+  "Check or uncheck a checkbox/radio. Active tab unless browserId given.",
+  {
+    selector: z.string().describe("CSS selector of the checkbox/radio."),
+    checked: z.boolean().describe("true to check, false to uncheck."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, checked, browserId }) => {
+    try {
+      await withAttachedTab(browserId, (id) => client.setChecked(id, selector, checked));
+      return textResult(`Set ${selector} checked=${checked}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "submit_form",
+  "Submit a form (give a selector of the form or a field inside it; omit to submit the focused form). Active tab unless browserId given.",
+  {
+    selector: z.string().optional().describe("CSS selector of the form or a field in it."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, browserId }) => {
+    try {
+      await withAttachedTab(browserId, (id) => client.submitForm(id, selector));
+      return textResult(`Submitted: ${selector ?? "form"}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "upload_file",
+  "Set a file <input>'s file by absolute path (drives file-upload fields). Active tab unless browserId given.",
+  {
+    selector: z.string().describe("CSS selector of the file input."),
+    filePath: z.string().describe("Absolute path to the local file to upload."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ selector, filePath, browserId }) => {
+    try {
+      await withAttachedTab(browserId, (id) => client.uploadFile(id, selector, filePath));
+      return textResult(`Set ${selector} to ${filePath}`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "get_attribute",
+  "Read an attribute (e.g. href, value, aria-label) of an element. Active tab unless browserId given.",
+  {
+    name: z.string().describe("Attribute name, e.g. \"href\"."),
+    selector: z.string().optional().describe("CSS selector."),
+    ref: z.string().optional().describe("Fingerprint ref from snapshot."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ name, selector, ref, browserId }) => {
+    try {
+      if (!selector && !ref) return errorResult("Provide a `selector` or a `ref`.");
+      const v = await withAttachedTab(browserId, (id) => client.getAttribute(id, name, selector, ref));
+      return textResult(v ?? "(no attribute)");
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "get_article",
+  "Extract the main article of a page (Readability) as clean Markdown with title and byline — great for reading content pages. Active tab unless browserId given.",
+  {
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ browserId }) => {
+    try {
+      const a = await withAttachedTab(browserId, (id) => client.getArticle(id));
+      if (!a || !a.markdown) return errorResult("No readable article found on this page.");
+      const head = `# ${a.title ?? "(untitled)"}${a.byline ? `\n*${a.byline}*` : ""}\n\n`;
+      return textResult(head + a.markdown);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "get_cookies",
+  "List cookies visible to the current page. Active tab unless browserId given.",
+  {
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ browserId }) => {
+    try {
+      const c = await withAttachedTab(browserId, (id) => client.getCookies(id));
+      return textResult(JSON.stringify(c, null, 2));
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "wait_for_network_idle",
+  "Wait until the page's network activity settles (useful after navigation or SPA actions). Active tab unless browserId given.",
+  {
+    timeoutMs: z.number().optional().describe("Max wait in ms. Default: 8000."),
+    browserId: z.string().optional().describe("Target tab. Defaults to active."),
+  },
+  async ({ timeoutMs, browserId }) => {
+    try {
+      const ok = await withAttachedTab(browserId, (id) => client.waitForNetworkIdle(id, timeoutMs));
+      return ok ? textResult("Network is idle.") : errorResult("Network did not become idle in time.");
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "list_workspaces",
+  "List Floorp workspaces (id and name). Floorp-specific.",
+  {},
+  async () => {
+    try {
+      const ws = await client.listWorkspaces();
+      if (!ws.length) return textResult("No workspaces.");
+      return textResult(ws.map((w) => `${w.id}  ${w.name}`).join("\n"));
+    } catch (err) {
+      const m = (err as Error).message;
+      if (/404|not found/i.test(m)) {
+        return errorResult("The Workspaces API isn't available on this Floorp build.");
+      }
+      return errorResult(m);
+    }
+  },
+);
+
+server.tool(
+  "switch_workspace",
+  "Switch to a Floorp workspace by id (from list_workspaces). Floorp-specific.",
+  {
+    id: z.string().describe("Workspace id."),
+  },
+  async ({ id }) => {
+    try {
+      const ok = await client.switchWorkspace(id);
+      return ok ? textResult(`Switched to workspace ${id}`) : errorResult("Switch failed.");
+    } catch (err) {
+      const m = (err as Error).message;
+      if (/404|not found/i.test(m)) {
+        return errorResult("The Workspaces API isn't available on this Floorp build.");
+      }
+      return errorResult(m);
     }
   },
 );

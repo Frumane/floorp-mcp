@@ -113,6 +113,21 @@ default**, so any local process can drive your browser while it's enabled. Only
 enable `floorp.mcp.enabled` when you intend to use it, and treat page content the
 assistant reads as untrusted input.
 
+**More interaction & queries**
+
+| Tool | What it does |
+|------|--------------|
+| `hover` / `double_click` / `right_click` | Mouse gestures on an element (selector or `ref`). |
+| `select_option` | Choose an option in a `<select>`. |
+| `set_checked` | Check/uncheck a checkbox or radio. |
+| `submit_form` | Submit a form. |
+| `upload_file` | Set a file `<input>` by absolute path. |
+| `get_attribute` | Read an element attribute (href, value, …). |
+| `get_article` | Readability-extracted main article as Markdown. |
+| `get_cookies` | Cookies visible to the page. |
+| `wait_for_network_idle` | Wait for network activity to settle. |
+| `list_workspaces` / `switch_workspace` | Floorp workspaces (where supported). |
+
 ## Notes & limitations
 
 Learned from driving real apps (incl. Google Flow):
@@ -142,6 +157,8 @@ Learned from driving real apps (incl. Google Flow):
       foreground safety guard — drives React/Slate editors & bot-guarded submits
 - [x] `snapshot` (fingerprint refs + selector map) + `click` by `ref` + auto-scroll-into-view
 - [x] `launch_floorp` — start Floorp if not running (Windows)
+- [x] Extra tools: hover, double/right-click, select_option, set_checked, submit,
+      upload_file, get_attribute, get_article, get_cookies, wait_for_network_idle, workspaces
 - [ ] Real OS mouse (coordinate-calibrated click) — cross-DPI screen mapping
 - [ ] macOS / Linux native-input backends
 - [ ] JS `evaluate` (available in newer Floorp builds; older ones return HTTP 404)
