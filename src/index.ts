@@ -12,14 +12,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { FloorpClient, type TabInfo } from "./floorp-client.js";
-import { realType, realKey, realClear } from "./os-input.js";
+import { realType, realKey, realClear, moveCursor, realClick, floorpWindowBounds } from "./os-input.js";
 import { launchFloorp } from "./launch.js";
 
 const client = new FloorpClient();
 
 const server = new McpServer({
   name: "floorp-mcp",
-  version: "0.6.0",
+  version: "1.0.0",
 });
 
 // -- helpers ------------------------------------------------------------------
@@ -702,6 +702,63 @@ server.tool(
         return errorResult("The Workspaces API isn't available on this Floorp build.");
       }
       return errorResult(m);
+    }
+  },
+);
+
+// -- OS-level (real) mouse (Windows) (v1.0.0) ---------------------------------
+// Coordinates are SCREEN pixels and must fall inside the Floorp window. Call
+// window_bounds first to get the valid range. Same foreground guard as the
+// keyboard, plus a bounds check, so a click can never land in another app.
+
+server.tool(
+  "window_bounds",
+  "Return Floorp's window rectangle in screen pixels (left, top, right, bottom, width, height). Use this to compute coordinates for move_cursor / real_click. Windows only.",
+  {},
+  async () => {
+    try {
+      const b = await floorpWindowBounds();
+      return textResult(
+        `Floorp window (screen px): left=${b.left} top=${b.top} right=${b.right} bottom=${b.bottom} (${b.width}x${b.height})`,
+      );
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "move_cursor",
+  "Move the REAL OS cursor to a screen pixel (must be inside the Floorp window). Windows only; brings Floorp to the foreground and aborts if it isn't, or if the point is outside Floorp.",
+  {
+    x: z.number().describe("Screen X (pixels)."),
+    y: z.number().describe("Screen Y (pixels)."),
+  },
+  async ({ x, y }) => {
+    try {
+      await moveCursor(x, y);
+      return textResult(`Moved cursor to (${x}, ${y}).`);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  },
+);
+
+server.tool(
+  "real_click",
+  "Click with the REAL OS mouse at a screen pixel inside the Floorp window (genuine, isTrusted click). Use window_bounds to find the range. Refuses to click outside Floorp or if Floorp isn't foreground. Windows only.",
+  {
+    x: z.number().describe("Screen X (pixels)."),
+    y: z.number().describe("Screen Y (pixels)."),
+    button: z.enum(["left", "right"]).optional().describe("Mouse button. Default: left."),
+    double: z.boolean().optional().describe("Double-click. Default: false."),
+  },
+  async ({ x, y, button, double }) => {
+    try {
+      await realClick(x, y, { button, double });
+      return textResult(`${double ? "Double-" : ""}${button === "right" ? "Right-" : ""}clicked at (${x}, ${y}).`);
+    } catch (err) {
+      return errorResult((err as Error).message);
     }
   },
 );

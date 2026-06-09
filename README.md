@@ -106,6 +106,19 @@ Workflow: `click` the field to focus it → `real_clear` / `real_type` / `real_k
 > isn't running or can't be focused, they **abort without typing a single key**, so
 > input can never leak into another app.
 
+**Real OS mouse (Windows)** — genuine `isTrusted` clicks at screen coordinates:
+
+| Tool | What it does |
+|------|--------------|
+| `window_bounds` | Floorp's window rectangle in screen pixels (to compute targets). |
+| `move_cursor` | Move the real OS cursor to a screen pixel inside Floorp. |
+| `real_click` | Real OS click (left/right, single/double) at a screen pixel inside Floorp. |
+
+> **Double guard:** the click is sent only when Floorp is verified foreground **and**
+> the point lies **inside Floorp's window rect** — a stray coordinate is refused, so
+> a click can never land in another app/window. Coordinates are screen pixels
+> (note display scaling/DPI when mapping from a screenshot).
+
 ## Security
 
 The Floorp automation API listens on `127.0.0.1` with **no authentication by
@@ -159,7 +172,9 @@ Learned from driving real apps (incl. Google Flow):
 - [x] `launch_floorp` — start Floorp if not running (Windows)
 - [x] Extra tools: hover, double/right-click, select_option, set_checked, submit,
       upload_file, get_attribute, get_article, get_cookies, wait_for_network_idle, workspaces
-- [ ] Real OS mouse (coordinate-calibrated click) — cross-DPI screen mapping
+- [x] Real OS mouse (Windows): `window_bounds` / `move_cursor` / `real_click`, with a
+      foreground + in-window-bounds double guard
+- [ ] WebDriver BiDi engine — non-Floorp Firefox forks + JS `evaluate` + element-relative native input
 - [ ] macOS / Linux native-input backends
 - [ ] JS `evaluate` (available in newer Floorp builds; older ones return HTTP 404)
 - [ ] Optional bearer-token auth
