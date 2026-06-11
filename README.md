@@ -120,13 +120,6 @@ Workflow: `click` the field to focus it → `real_clear` / `real_type` / `real_k
 > a click can never land in another app/window. Coordinates are screen pixels
 > (note display scaling/DPI when mapping from a screenshot).
 
-## Security
-
-The Floorp automation API listens on `127.0.0.1` with **no authentication by
-default**, so any local process can drive your browser while it's enabled. Only
-enable `floorp.mcp.enabled` when you intend to use it, and treat page content the
-assistant reads as untrusted input.
-
 **More interaction & queries**
 
 | Tool | What it does |
@@ -135,12 +128,55 @@ assistant reads as untrusted input.
 | `select_option` | Choose an option in a `<select>`. |
 | `set_checked` | Check/uncheck a checkbox or radio. |
 | `submit_form` | Submit a form. |
-| `upload_file` | Set a file `<input>` by absolute path. |
+| `upload_file` | **Sensitive.** Set a file `<input>` by absolute path — restrict with `FLOORP_MCP_ALLOW_UPLOAD_DIRS`. |
 | `get_attribute` | Read an element attribute (href, value, …). |
 | `get_article` | Readability-extracted main article as Markdown. |
-| `get_cookies` | Cookies visible to the page. |
+| `get_cookies` | **Sensitive.** Cookies visible to the page — values redacted unless `includeValues: true`. |
 | `wait_for_network_idle` | Wait for network activity to settle. |
 | `list_workspaces` / `switch_workspace` | Floorp workspaces (where supported). |
+
+## Security
+
+Understand the threat model before enabling this. Two risks dominate:
+
+1. **Floorp's automation API has no authentication by default.** While
+   `floorp.mcp.enabled` is on, **any local process** can drive your logged-in
+   browser via `127.0.0.1:58261` — not just this server. There is also no
+   Origin check, so hostile web pages may attempt CSRF/DNS-rebinding tricks
+   against it. Mitigations:
+   - Turn `floorp.mcp.enabled` **off** when you're not using automation.
+   - Set the `FLOORP_MCP_TOKEN` environment variable — this server then sends it
+     as a `Bearer` token on every request (effective on Floorp builds that
+     enforce a token; harmless otherwise).
+2. **Prompt injection ("lethal trifecta").** The assistant reads untrusted page
+   content *and* can act on your authenticated sessions (click, type, submit,
+   navigate, real OS input). A malicious page could try to instruct the
+   assistant to act against you. Treat everything read from a page as untrusted;
+   don't run automation unattended on sites you don't trust.
+
+Hardening built into this server:
+
+- **Real OS input is double-guarded:** keys/clicks are sent only after verifying
+  Floorp is the foreground window, and mouse clicks must land inside Floorp's
+  window rectangle — otherwise it aborts *without* sending anything. PowerShell
+  payloads are passed base64-encoded via process-private environment variables
+  (no shell interpolation, no temp script files on disk).
+- **URL scheme allowlist:** `open_tab`/`navigate_tab` accept only `http(s)`
+  (and `about:blank`) by default, blocking `file://` and browser-internal pages.
+  Override consciously with `FLOORP_MCP_ALLOW_PRIVILEGED_URLS=1`.
+- **Cookie values are redacted by default** in `get_cookies`; raw values require
+  an explicit `includeValues: true`.
+- **Upload allowlist:** set `FLOORP_MCP_ALLOW_UPLOAD_DIRS` (`;`-separated
+  directories) to confine `upload_file` to specific folders.
+- **No `evaluate` tool:** arbitrary page-JS execution is deliberately not exposed.
+
+| Environment variable | Effect |
+|---|---|
+| `FLOORP_MCP_TOKEN` | Sent as `Authorization: Bearer …` to the Floorp API. |
+| `FLOORP_MCP_PORT` | API port (default `58261`). |
+| `FLOORP_MCP_ALLOW_PRIVILEGED_URLS` | `1` allows non-http(s) URLs in open/navigate. |
+| `FLOORP_MCP_ALLOW_UPLOAD_DIRS` | Restrict `upload_file` to these directories (`;`-separated). |
+| `FLOORP_PATH` | Full path to `floorp.exe` for `launch_floorp`. |
 
 ## Notes & limitations
 

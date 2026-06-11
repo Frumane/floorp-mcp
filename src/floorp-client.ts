@@ -132,7 +132,7 @@ export class FloorpClient {
   async getInstanceBrowserId(instanceId: string): Promise<string | null> {
     const r = await this.request<{ browserId?: string }>(
       "GET",
-      `/tabs/instances/${instanceId}`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}`,
     );
     return r.browserId ?? null;
   }
@@ -149,14 +149,14 @@ export class FloorpClient {
 
   /** Release a handle WITHOUT closing the tab. */
   async detach(instanceId: string): Promise<void> {
-    await this.request<{ ok: boolean }>("DELETE", `/tabs/instances/${instanceId}`);
+    await this.request<{ ok: boolean }>("DELETE", `/tabs/instances/${encodeURIComponent(instanceId)}`);
   }
 
   /** Actually close the tab behind a handle. */
   async closeTab(instanceId: string): Promise<void> {
     await this.request<{ ok: boolean }>(
       "POST",
-      `/tabs/instances/${instanceId}/close`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/close`,
     );
   }
 
@@ -165,7 +165,7 @@ export class FloorpClient {
   async navigate(instanceId: string, url: string): Promise<void> {
     await this.request<{ ok: boolean }>(
       "POST",
-      `/tabs/instances/${instanceId}/navigate`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/navigate`,
       { url },
     );
   }
@@ -173,7 +173,7 @@ export class FloorpClient {
   async getUri(instanceId: string): Promise<string | null> {
     const r = await this.request<{ uri: string | null }>(
       "GET",
-      `/tabs/instances/${instanceId}/uri`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/uri`,
     );
     return r.uri;
   }
@@ -181,7 +181,7 @@ export class FloorpClient {
   async getTitle(instanceId: string): Promise<string | null> {
     const r = await this.request<{ title?: string }>(
       "GET",
-      `/tabs/instances/${instanceId}/title`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/title`,
     );
     return r.title ?? null;
   }
@@ -190,7 +190,7 @@ export class FloorpClient {
   async getText(instanceId: string, mode: TextMode = "full"): Promise<string> {
     const r = await this.request<{ text?: string }>(
       "POST",
-      `/tabs/instances/${instanceId}/text`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/text`,
       { mode, enableFingerprints: false, includeSelectorMap: false },
     );
     return r.text ?? "";
@@ -200,7 +200,7 @@ export class FloorpClient {
     const qs = selector ? `?selector=${encodeURIComponent(selector)}` : "";
     const r = await this.request<{ html?: string }>(
       "GET",
-      `/tabs/instances/${instanceId}/html${qs}`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/html${qs}`,
     );
     return r.html ?? "";
   }
@@ -208,7 +208,7 @@ export class FloorpClient {
   async getAccessibilityTree(instanceId: string): Promise<unknown> {
     const r = await this.request<{ tree?: unknown }>(
       "GET",
-      `/tabs/instances/${instanceId}/ax-tree?interestingOnly=true`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/ax-tree?interestingOnly=true`,
     );
     return r.tree ?? null;
   }
@@ -217,7 +217,7 @@ export class FloorpClient {
   async screenshot(instanceId: string): Promise<string | null> {
     const r = await this.request<{ image?: string }>(
       "GET",
-      `/tabs/instances/${instanceId}/screenshot`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/screenshot`,
     );
     return r.image ? FloorpClient.stripImagePrefix(r.image) : null;
   }
@@ -226,7 +226,7 @@ export class FloorpClient {
   async fullPageScreenshot(instanceId: string): Promise<string | null> {
     const r = await this.request<{ image?: string }>(
       "GET",
-      `/tabs/instances/${instanceId}/fullPageScreenshot`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/fullPageScreenshot`,
     );
     return r.image ? FloorpClient.stripImagePrefix(r.image) : null;
   }
@@ -242,7 +242,7 @@ export class FloorpClient {
   ): Promise<void> {
     const r = await this.request<{ ok?: boolean }>(
       "POST",
-      `/tabs/instances/${instanceId}${suffix}`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}${suffix}`,
       body,
     );
     if (r.ok === false) {
@@ -252,7 +252,7 @@ export class FloorpClient {
 
   /** Scroll an element (by selector or fingerprint) into view. */
   async scrollTo(instanceId: string, selector?: string, fingerprint?: string): Promise<void> {
-    await this.request("POST", `/tabs/instances/${instanceId}/scrollTo`, { selector, fingerprint });
+    await this.request("POST", `/tabs/instances/${encodeURIComponent(instanceId)}/scrollTo`, { selector, fingerprint });
   }
 
   async click(
@@ -289,7 +289,7 @@ export class FloorpClient {
   async snapshot(instanceId: string, mode: TextMode = "full"): Promise<string> {
     const r = await this.request<{ text?: string }>(
       "POST",
-      `/tabs/instances/${instanceId}/text`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/text`,
       { mode, enableFingerprints: true, includeSelectorMap: true },
     );
     return r.text ?? "";
@@ -345,7 +345,7 @@ export class FloorpClient {
   async getValue(instanceId: string, selector: string): Promise<string | null> {
     const r = await this.request<{ value?: string | null }>(
       "GET",
-      `/tabs/instances/${instanceId}/value?selector=${encodeURIComponent(selector)}`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/value?selector=${encodeURIComponent(selector)}`,
     );
     return r.value ?? null;
   }
@@ -358,7 +358,7 @@ export class FloorpClient {
   ): Promise<boolean> {
     const r = await this.request<{ ok?: boolean; found?: boolean }>(
       "POST",
-      `/tabs/instances/${instanceId}/waitForElement`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/waitForElement`,
       { selector, state, timeout },
     );
     return r.found ?? r.ok ?? false;
@@ -371,7 +371,7 @@ export class FloorpClient {
   async evaluate(instanceId: string, script: string): Promise<EvaluateResult> {
     return this.request<EvaluateResult>(
       "POST",
-      `/tabs/instances/${instanceId}/evaluate`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/evaluate`,
       { script },
     );
   }
@@ -426,7 +426,7 @@ export class FloorpClient {
     if (fingerprint) p.set("fingerprint", fingerprint);
     const r = await this.request<{ value?: string | null }>(
       "GET",
-      `/tabs/instances/${instanceId}/attribute?${p.toString()}`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/attribute?${p.toString()}`,
     );
     return r.value ?? null;
   }
@@ -435,13 +435,13 @@ export class FloorpClient {
   async getArticle(
     instanceId: string,
   ): Promise<{ title?: string; byline?: string; markdown?: string; length?: number } | null> {
-    return this.request("GET", `/tabs/instances/${instanceId}/article`);
+    return this.request("GET", `/tabs/instances/${encodeURIComponent(instanceId)}/article`);
   }
 
   async getCookies(instanceId: string): Promise<unknown[]> {
     const r = await this.request<{ cookies?: unknown[] }>(
       "GET",
-      `/tabs/instances/${instanceId}/cookies`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/cookies`,
     );
     return r.cookies ?? [];
   }
@@ -450,7 +450,7 @@ export class FloorpClient {
   async waitForNetworkIdle(instanceId: string, timeout = 8000): Promise<boolean> {
     const r = await this.request<{ ok?: boolean }>(
       "POST",
-      `/tabs/instances/${instanceId}/waitForNetworkIdle`,
+      `/tabs/instances/${encodeURIComponent(instanceId)}/waitForNetworkIdle`,
       { timeout },
     );
     return r.ok ?? false;

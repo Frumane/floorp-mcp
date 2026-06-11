@@ -20,15 +20,14 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 
 const pexec = promisify(execFile);
 
-// PowerShell script: foreground-guard + send keys. param-based, no backticks so
-// it survives being stored in a JS template literal.
-const PS_SCRIPT = `param([string]$Mode, [string]$Payload)
+// PowerShell script: foreground-guard + send keys. Runs via -EncodedCommand (no
+// temp .ps1 file on disk → no tamper window); inputs arrive through process-private
+// environment variables, never string-interpolated into the script.
+const PS_SCRIPT = `$Mode = $env:FLOORP_OSINPUT_MODE
+$Payload = $env:FLOORP_OSINPUT_PAYLOAD
 $ErrorActionPreference = 'Stop'
 Add-Type @"
 using System;
@@ -92,14 +91,8 @@ if ($Mode -eq 'type') {
 Write-Output 'OK'
 `;
 
-let scriptPath: string | null = null;
-function ensureScript(): string {
-  if (!scriptPath) {
-    scriptPath = join(tmpdir(), "floorp-mcp-osinput.ps1");
-    writeFileSync(scriptPath, PS_SCRIPT, "utf8");
-  }
-  return scriptPath;
-}
+// -EncodedCommand wants base64 of UTF-16LE.
+const PS_SCRIPT_ENC = Buffer.from(PS_SCRIPT, "utf16le").toString("base64");
 
 function b64(s: string): string {
   return Buffer.from(s, "utf8").toString("base64");
@@ -109,13 +102,16 @@ async function runPs(mode: "type" | "keys", payload: string): Promise<void> {
   if (process.platform !== "win32") {
     throw new Error("OS keyboard input is currently Windows-only.");
   }
-  const file = ensureScript();
   let stdout = "";
   try {
     const res = await pexec(
       "powershell",
-      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", file, "-Mode", mode, "-Payload", b64(payload)],
-      { windowsHide: true, timeout: 60_000 },
+      ["-NoProfile", "-NonInteractive", "-EncodedCommand", PS_SCRIPT_ENC],
+      {
+        windowsHide: true,
+        timeout: 60_000,
+        env: { ...process.env, FLOORP_OSINPUT_MODE: mode, FLOORP_OSINPUT_PAYLOAD: b64(payload) },
+      },
     );
     stdout = res.stdout;
   } catch (err: any) {
@@ -186,7 +182,9 @@ export function realClear(): Promise<void> {
 // foreground AND the (x,y) point lies inside Floorp's window rect, so a stray
 // coordinate can never click another app/window.
 
-const MOUSE_SCRIPT = `param([int]$X, [int]$Y, [string]$Action)
+const MOUSE_SCRIPT = `$X = [int]$env:FLOORP_OSMOUSE_X
+$Y = [int]$env:FLOORP_OSMOUSE_Y
+$Action = $env:FLOORP_OSMOUSE_ACTION
 $ErrorActionPreference = 'Stop'
 Add-Type @"
 using System;
@@ -237,25 +235,25 @@ elseif ($Action -eq 'right') { [FloorpMouse]::mouse_event(8,0,0,0,[IntPtr]::Zero
 Write-Output 'OK'
 `;
 
-let mouseScriptPath: string | null = null;
-function ensureMouseScript(): string {
-  if (!mouseScriptPath) {
-    mouseScriptPath = join(tmpdir(), "floorp-mcp-osmouse.ps1");
-    writeFileSync(mouseScriptPath, MOUSE_SCRIPT, "utf8");
-  }
-  return mouseScriptPath;
-}
+const MOUSE_SCRIPT_ENC = Buffer.from(MOUSE_SCRIPT, "utf16le").toString("base64");
 
 async function runMouse(x: number, y: number, action: "move" | "click" | "double" | "right" | "bounds"): Promise<string> {
   if (process.platform !== "win32") throw new Error("OS mouse is currently Windows-only.");
-  const file = ensureMouseScript();
   let stdout = "";
   try {
     const res = await pexec(
       "powershell",
-      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", file,
-       "-X", String(Math.round(x)), "-Y", String(Math.round(y)), "-Action", action],
-      { windowsHide: true, timeout: 30_000 },
+      ["-NoProfile", "-NonInteractive", "-EncodedCommand", MOUSE_SCRIPT_ENC],
+      {
+        windowsHide: true,
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          FLOORP_OSMOUSE_X: String(Math.round(x)),
+          FLOORP_OSMOUSE_Y: String(Math.round(y)),
+          FLOORP_OSMOUSE_ACTION: action,
+        },
+      },
     );
     stdout = res.stdout;
   } catch (err: any) {
