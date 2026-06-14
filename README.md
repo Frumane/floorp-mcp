@@ -5,32 +5,36 @@
 
 > An **MCP (Model Context Protocol)** server that lets AI assistants — Claude Code,
 > Claude Desktop, Cursor, and any MCP client — **read pages, take screenshots and
-> manage tabs** in the [Floorp](https://floorp.app) browser, using your real,
-> logged-in browsing session.
+> manage tabs** in [Floorp](https://floorp.app) **and other Firefox-based browsers**
+> (LibreWolf, Waterfox, Zen, Mullvad, Firefox…), using your real, logged-in session.
 
-Think "Claude in Chrome", but for Floorp (and other Firefox-based browsers on the
-roadmap).
+Think "Claude in Chrome", but for the whole Firefox/Gecko family.
 
 ## How it works
 
-Floorp ships a **built-in local automation server**. When you set
-`floorp.mcp.enabled = true` in `about:config`, Floorp exposes an HTTP API on
-`http://127.0.0.1:58261`. This project is a thin, well-documented MCP bridge that
-translates MCP tool calls into requests against that API — **no browser extension
-required**.
+floorp-mcp talks to the browser through one of two backends, picked automatically:
+
+- **Floorp** ships a built-in automation HTTP API. Set `floorp.mcp.enabled = true`
+  in `about:config` and floorp-mcp uses the fast `http://127.0.0.1:58261` API —
+  no extension, richest feature set.
+- **Any other Gecko browser** — launch it with **Marionette** (the automation
+  engine built into every Firefox fork) and floorp-mcp drives your live session
+  over it. Same tools, same real session.
 
 ```
   Claude Code / Desktop / Cursor
             │  MCP (stdio)
             ▼
-      floorp-mcp  ──HTTP──►  Floorp :58261  ──►  your real tabs
-   (this project)            (built-in API)
+      floorp-mcp ──► Floorp :58261 (built-in API)        ─┐
+   (this project) ──► Marionette :2828 (any Gecko fork)  ─┴─► your real tabs
 ```
 
 ## Requirements
 
-- **Floorp** installed and running.
-- In `about:config`, set **`floorp.mcp.enabled`** to `true`, then fully restart Floorp.
+- A **Firefox-based browser** installed and running, with automation enabled:
+  - **Floorp:** set **`floorp.mcp.enabled`** to `true` in `about:config`, restart Floorp.
+  - **Other forks (LibreWolf / Waterfox / Zen / Mullvad / Firefox):** launch the
+    browser with **`-marionette`** (see [Browser support](#browser-support)).
 - **Node.js** ≥ 18.
 
 ## Setup
@@ -75,6 +79,32 @@ Or with Claude Code's CLI: `claude mcp add floorp -s user -- npx -y floorp-mcp`.
 
 > **One-time Floorp step:** set `floorp.mcp.enabled = true` in `about:config` and
 > restart Floorp so its automation API is available.
+
+## Browser support
+
+floorp-mcp picks its backend automatically: if Floorp's `:58261` API is reachable
+it uses that; otherwise it connects to **Marionette**, the automation engine built
+into every Gecko browser. To use a non-Floorp browser, launch it once with
+Marionette enabled:
+
+| Browser | Launch with Marionette |
+|---|---|
+| **Floorp** | *(no flag — just set `floorp.mcp.enabled=true`; uses the native API)* |
+| **Firefox** | `firefox -marionette` |
+| **LibreWolf** | `librewolf -marionette` |
+| **Waterfox** | `waterfox -marionette` |
+| **Zen** | `zen -marionette` |
+| **Mullvad** | `mullvad-browser -marionette` |
+
+Marionette listens on TCP **2828** by default. To use another port, set the
+`marionette.port` pref in the profile (e.g. via `user.js`) and start floorp-mcp
+with a matching `MARIONETTE_PORT`. Force a backend with `FLOORP_MCP_BACKEND=marionette`.
+
+> **Note:** Marionette must be enabled *at launch* to attach to your live session.
+> On the Marionette backend, Floorp-only extras (`snapshot` fingerprints,
+> `list_workspaces`/`switch_workspace`, accessibility tree) return a clear
+> "not supported" message — use `find` / `read_page` instead. Everything else
+> (tabs, navigation, click, type, forms, screenshots, cookies, real OS input…) works.
 
 ## Tools
 
@@ -224,6 +254,9 @@ untrusted sites unattended.
 | `FLOORP_MCP_ALLOW_DOMAINS` | Comma-separated domain allowlist for navigation (subdomains included). Unset = any public host. |
 | `FLOORP_MCP_ALLOW_UPLOAD_DIRS` | Restrict `upload_file` to these directories (`;`-separated). |
 | `FLOORP_PATH` | Full path to `floorp.exe` for `launch_floorp`. |
+| `FLOORP_MCP_BACKEND` | Force the backend: `floorp` or `marionette`. Default: auto-detect. |
+| `MARIONETTE_PORT` | Marionette TCP port for non-Floorp browsers (default `2828`). |
+| `FLOORP_MCP_BROWSER_PROCESS` | Process-name regex the real OS keyboard/mouse may target (default covers the common Gecko forks). |
 
 ## Performance
 
@@ -272,11 +305,12 @@ Learned from driving real apps (incl. Google Flow):
       upload_file, get_attribute, get_article, get_cookies, wait_for_network_idle, workspaces
 - [x] Real OS mouse (Windows): `window_bounds` / `move_cursor` / `real_click`, with a
       foreground + in-window-bounds double guard
-- [ ] WebDriver BiDi engine — non-Floorp Firefox forks + JS `evaluate` + element-relative native input
+- [x] **Marionette backend — all Firefox-based browsers** (LibreWolf, Waterfox,
+      Zen, Mullvad, Firefox…), auto-selected when Floorp's API isn't present
 - [ ] macOS / Linux native-input backends
 - [ ] JS `evaluate` (available in newer Floorp builds; older ones return HTTP 404)
 - [ ] Optional bearer-token auth
-- [ ] Support for other Firefox-based browsers (WebDriver BiDi fallback)
+- [ ] `launch` helper for non-Floorp browsers (start them with `-marionette`)
 
 ## Acknowledgements
 

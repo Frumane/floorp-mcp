@@ -8,7 +8,7 @@
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import type { FloorpClient } from "./floorp-client.js";
+import type { BrowserBackend } from "./floorp-client.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -24,7 +24,7 @@ function findFloorpExe(): string | null {
   return candidates.find((p) => existsSync(p)) ?? null;
 }
 
-export async function launchFloorp(client: FloorpClient): Promise<string> {
+export async function launchFloorp(client: BrowserBackend): Promise<string> {
   if (await client.health()) {
     return "Floorp is already running and its automation API is reachable.";
   }

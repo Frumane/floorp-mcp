@@ -4,6 +4,26 @@ All notable changes to **floorp-mcp** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.8.0]
+
+### Added
+- **Support for all Firefox-based browsers via Marionette.** floorp-mcp now drives
+  LibreWolf, Waterfox, Zen, Mullvad and Firefox (any Gecko browser) — not just
+  Floorp — by attaching to Marionette, the automation engine built into every fork.
+  Launch the browser with `-marionette` and floorp-mcp controls your live session
+  with the same tools. The backend is auto-selected (Floorp's `:58261` API when
+  present, else Marionette); force it with `FLOORP_MCP_BACKEND`.
+- New `BrowserBackend` interface abstracts the browser; `FloorpClient` and the new
+  `MarionetteBackend` both implement it, so all tools work across backends.
+- Real OS keyboard/mouse now targets any common Gecko browser window (configurable
+  with `FLOORP_MCP_BROWSER_PROCESS`).
+- Env: `FLOORP_MCP_BACKEND`, `MARIONETTE_PORT`, `FLOORP_MCP_BROWSER_PROCESS`.
+
+### Notes
+- On the Marionette backend, Floorp-only extras (`snapshot` fingerprints,
+  workspaces, accessibility tree) report a clear "not supported" message; use
+  `find` / `read_page` instead. Everything else works on every fork.
+
 ## [1.7.0]
 
 ### Added
@@ -135,6 +155,7 @@ All notable changes to **floorp-mcp** are documented here. The format follows
   interaction (`click`, `type_text`, `fill_form`, `press_key`,
   `wait_for_element`, `get_value`). (12 tools.)
 
+[1.8.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.8.0
 [1.7.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.7.0
 [1.6.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.6.0
 [1.5.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.5.0

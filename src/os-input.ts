@@ -33,6 +33,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 // our line protocol from stdin and writing "RESP:<token>:<result>" to stdout.
 // Request payloads arrive as base64 (safe charset, no spaces) so they can never
 // break the protocol or be interpreted as PowerShell.
+// Which browser windows OS-input may target (process-name regex). Defaults to the
+// common Gecko forks; override with FLOORP_MCP_BROWSER_PROCESS. Sanitised to safe chars.
+const BROWSER_RE = (process.env.FLOORP_MCP_BROWSER_PROCESS || "floorp|firefox|librewolf|waterfox|zen|mullvad|navigator").replace(/[^a-zA-Z0-9|_-]/g, "");
 const HOST_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 Add-Type @"
@@ -56,7 +59,7 @@ Add-Type -AssemblyName System.Windows.Forms
 
 function Get-FloorpWindow {
   for ($try = 0; $try -lt 6; $try++) {
-    $p = Get-Process | Where-Object { $_.ProcessName -match 'floorp' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+    $p = Get-Process | Where-Object { $_.ProcessName -match '${BROWSER_RE}' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
     if ($p) { return $p.MainWindowHandle }
     [System.Threading.Thread]::Sleep(150)
   }

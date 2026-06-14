@@ -11,18 +11,19 @@
 import { McpServer, type ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { FloorpClient, type TabInfo } from "./floorp-client.js";
+import { FloorpClient, type TabInfo, type BrowserBackend } from "./floorp-client.js";
+import { MarionetteBackend } from "./marionette-backend.js";
 import { realType, realKey, realClear, moveCursor, realClick, floorpWindowBounds } from "./os-input.js";
 import { launchFloorp } from "./launch.js";
 import { PRIVILEGED_SCHEME, assertNavigableUrl, assertUploadAllowed } from "./guards.js";
 import { findInHtml } from "./html-find.js";
 import { ANNOTATIONS } from "./annotations.js";
 
-const client = new FloorpClient();
+let client: BrowserBackend = new FloorpClient();
 
 const server = new McpServer({
   name: "floorp-mcp",
-  version: "1.7.1",
+  version: "1.8.0",
 });
 
 // -- helpers ------------------------------------------------------------------
@@ -885,6 +886,23 @@ regTool(
 // wizard; with no subcommand it runs the MCP server on stdio (what MCP clients use).
 const SETUP_CMDS = new Set(["setup", "install", "init", "config", "add"]);
 
+/** Choose the browser backend: Floorp's rich :58261 API when available, else
+ *  Marionette (any Gecko browser launched with -marionette). FLOORP_MCP_BACKEND
+ *  =floorp|marionette forces one. */
+async function pickBackend(): Promise<BrowserBackend> {
+  const forced = process.env.FLOORP_MCP_BACKEND?.toLowerCase();
+  if (forced === "marionette") return new MarionetteBackend();
+  const floorp = new FloorpClient();
+  if (forced === "floorp") return floorp;
+  if (await floorp.health()) return floorp;
+  const mar = new MarionetteBackend();
+  if (await mar.health()) {
+    console.error(`floorp-mcp: Floorp API not found — using Marionette backend (port ${process.env.MARIONETTE_PORT || 2828}).`);
+    return mar;
+  }
+  return floorp; // neither reachable; Floorp's errors give the clearest setup hint
+}
+
 async function main() {
   const sub = process.argv[2];
   if (sub && SETUP_CMDS.has(sub)) {
@@ -892,6 +910,7 @@ async function main() {
     await runSetup(process.argv.slice(3));
     return;
   }
+  client = await pickBackend();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr is safe; stdout is reserved for the MCP protocol.

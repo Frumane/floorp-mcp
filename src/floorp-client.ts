@@ -41,7 +41,63 @@ export interface EvaluateResult {
 
 const DATA_URL_PREFIX = /^data:image\/[a-z]+;base64,/;
 
-export class FloorpClient {
+/**
+ * The browser operations the MCP tools rely on. Implemented by `FloorpClient`
+ * (Floorp's :58261 API) and `MarionetteBackend` (any Gecko browser over
+ * Marionette), so the same tools work across all Firefox-based browsers.
+ * The `instanceId` is an opaque per-tab handle whose meaning is backend-specific.
+ */
+export interface BrowserBackend {
+  health(): Promise<boolean>;
+  listTabs(): Promise<TabInfo[]>;
+  activeTab(): Promise<TabInfo>;
+  createTab(url: string, opts?: CreateTabOptions): Promise<string>;
+  getInstanceBrowserId(instanceId: string): Promise<string | null>;
+  attach(browserId: string): Promise<string | null>;
+  detach(instanceId: string): Promise<void>;
+  closeTab(instanceId: string): Promise<void>;
+  navigate(instanceId: string, url: string): Promise<void>;
+  getUri(instanceId: string): Promise<string | null>;
+  getTitle(instanceId: string): Promise<string | null>;
+  getText(instanceId: string, mode?: TextMode): Promise<string>;
+  getHtml(instanceId: string, selector?: string): Promise<string>;
+  getAccessibilityTree(instanceId: string): Promise<unknown>;
+  screenshot(instanceId: string): Promise<string | null>;
+  fullPageScreenshot(instanceId: string): Promise<string | null>;
+  snapshot(instanceId: string, mode?: TextMode): Promise<string>;
+  click(
+    instanceId: string,
+    selector?: string,
+    opts?: { button?: "left" | "right" | "middle"; clickCount?: number; force?: boolean; fingerprint?: string },
+  ): Promise<void>;
+  input(
+    instanceId: string,
+    selector: string,
+    value: string,
+    opts?: { typingMode?: boolean; typingDelayMs?: number },
+  ): Promise<void>;
+  clearInput(instanceId: string, selector: string): Promise<void>;
+  dispatchTextInput(instanceId: string, selector: string, text: string): Promise<void>;
+  fillForm(instanceId: string, formData: Record<string, string>): Promise<void>;
+  pressKey(instanceId: string, key: string): Promise<void>;
+  waitForElement(instanceId: string, selector: string, state?: ElementState, timeout?: number): Promise<boolean>;
+  getValue(instanceId: string, selector: string): Promise<string | null>;
+  hover(instanceId: string, selector?: string, fingerprint?: string): Promise<void>;
+  doubleClick(instanceId: string, selector?: string, fingerprint?: string): Promise<void>;
+  rightClick(instanceId: string, selector?: string, fingerprint?: string): Promise<void>;
+  selectOption(instanceId: string, selector: string, value: string): Promise<void>;
+  setChecked(instanceId: string, selector: string, checked: boolean): Promise<void>;
+  submitForm(instanceId: string, selector?: string): Promise<void>;
+  uploadFile(instanceId: string, selector: string, filePath: string): Promise<void>;
+  getAttribute(instanceId: string, name: string, selector?: string, fingerprint?: string): Promise<string | null>;
+  getArticle(instanceId: string): Promise<{ title?: string; byline?: string; markdown?: string; length?: number } | null>;
+  getCookies(instanceId: string): Promise<unknown[]>;
+  waitForNetworkIdle(instanceId: string, timeout?: number): Promise<boolean>;
+  listWorkspaces(): Promise<Array<{ id: string; name: string }>>;
+  switchWorkspace(id: string): Promise<boolean>;
+}
+
+export class FloorpClient implements BrowserBackend {
   private readonly baseUrl: string;
   private readonly token: string;
 
