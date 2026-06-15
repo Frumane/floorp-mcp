@@ -4,6 +4,15 @@ All notable changes to **floorp-mcp** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.1]
+
+### Fixed
+- **Marionette navigation no longer hangs on ad/tracker-heavy pages.** Real-world
+  testing showed `WebDriver:Navigate` could block until timeout on pages whose
+  `load` event never fires (endless ad requests). The Marionette session now uses
+  `pageLoadStrategy: "eager"` (returns at DOMContentLoaded) plus a bounded
+  `pageLoad` timeout, so navigation completes promptly and the page is usable.
+
 ## [2.0.0]
 
 ### Changed (breaking — project renamed)
@@ -170,6 +179,7 @@ All notable changes to **floorp-mcp** are documented here. The format follows
   interaction (`click`, `type_text`, `fill_form`, `press_key`,
   `wait_for_element`, `get_value`). (12 tools.)
 
+[2.0.1]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.0.1
 [2.0.0]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.0.0
 [1.8.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.8.0
 [1.7.0]: https://github.com/Frumane/floorp-mcp/releases/tag/v1.7.0

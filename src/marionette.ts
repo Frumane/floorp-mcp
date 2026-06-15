@@ -137,11 +137,17 @@ export class MarionetteClient {
     });
   }
 
-  /** Start a WebDriver session and switch to page ("content") context. */
-  async newSession(): Promise<void> {
-    const r = await this.send<{ sessionId?: string }>("WebDriver:NewSession", {});
+  /** Start a WebDriver session and switch to page ("content") context.
+   *  `pageLoadStrategy: "eager"` returns from navigation at DOMContentLoaded so
+   *  ad/tracker-heavy pages (whose `load` event may never fire) don't hang. */
+  async newSession(capabilities: Record<string, unknown> = { pageLoadStrategy: "eager" }): Promise<void> {
+    const r = await this.send<{ sessionId?: string }>("WebDriver:NewSession", {
+      capabilities: { alwaysMatch: capabilities },
+    });
     this.sessionId = r?.sessionId ?? null;
     await this.send("Marionette:SetContext", { value: "content" }).catch(() => {});
+    // Bound page loads so a stuck navigation fails fast instead of timing out the command.
+    await this.send("WebDriver:SetTimeouts", { pageLoad: 20000 }).catch(() => {});
   }
 
   close(): void {
