@@ -15,8 +15,6 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Skips cleanly until you add the NPM_TOKEN secret (no red builds before setup).
-    if: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,6 +25,14 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm publish --provenance --access public
+      - name: Publish to npm (with provenance)
+        # `secrets` can't be used in a job/step `if`, so guard inside the run step:
+        # cleanly skips if NPM_TOKEN isn't configured instead of failing the build.
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN not set — skipping npm publish."
+            exit 0
+          fi
+          npm publish --provenance --access public
