@@ -4,6 +4,13 @@ All notable changes to **floorp-mcp** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.1]
+
+### Changed
+- First release **published from CI with npm provenance** — the npm page now links
+  to the exact source commit and GitHub Actions run that built the package, so the
+  published bytes are verifiable against this repo. No code changes.
+
 ## [2.1.0]
 
 ### Security / trust
@@ -196,6 +203,7 @@ All notable changes to **floorp-mcp** are documented here. The format follows
   interaction (`click`, `type_text`, `fill_form`, `press_key`,
   `wait_for_element`, `get_value`). (12 tools.)
 
+[2.1.1]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.1.1
 [2.1.0]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.1.0
 [2.0.1]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.0.1
 [2.0.0]: https://github.com/Frumane/gecko-mcp/releases/tag/v2.0.0
