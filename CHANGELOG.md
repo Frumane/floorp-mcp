@@ -4,6 +4,13 @@ All notable changes to **floorp-mcp** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.1]
+
+### Added
+- **Official MCP Registry metadata** — added `server.json` and the `mcpName`
+  field to `package.json` so gecko-mcp can be listed in the official Model
+  Context Protocol registry (and indexers that read it). No runtime changes.
+
 ## [2.2.0]
 
 ### Added
