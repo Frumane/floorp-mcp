@@ -4,6 +4,14 @@ All notable changes to **floorp-mcp** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.4]
+
+### Fixed
+- Corrected the MCP registry namespace case to `io.github.Frumane/gecko-mcp`
+  (the registry is case-sensitive to the GitHub username). Both `server.json`
+  `name` and the `mcpName` field now match exactly, so the OIDC publish is
+  authorized. No runtime/tool changes.
+
 ## [2.2.3]
 
 ### Fixed
